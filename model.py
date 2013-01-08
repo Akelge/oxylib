@@ -2,7 +2,7 @@
 Oxysoft standard library
 @brief Model utils
 
-$Id
+$Id$
 """
 __headUrl__  = '$HeadURL$'
 
