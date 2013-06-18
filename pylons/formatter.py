@@ -173,19 +173,22 @@ class Formatter(object):
             return render(tmpl)
         except mako.exceptions.TopLevelLookupException:
             self.status_int = 404
-            return "Template '%s' not found" % tmpl
+            return """<b>Template '%s' not found</b><p></p>
+            Rendering as text<br />
+            <pre>%s</pre>""" % (tmpl, self.toTXT())
 
     def toTXT(self):
         output=[]
         if isinstance(self.objDict, list):
             for d in self.objDict:
+                output.append('{\n')
                 for k,v in d.items():
-                    output.append('%s: %s' % (k,v))
-                output.append('')
+                    output.append('%s: %s\n' % (k,v))
+                output.append('}\n')
         elif isinstance(self.objDict, dict):
                 for k,v in self.objDict.items():
-                    output.append('%s: %s' % (k,v))
-        return '\n'.join(output)
+                    output.append('%s: %s\n' % (k,v))
+        return ''.join(output)
 
 
     # Pylonesque method to setup response
