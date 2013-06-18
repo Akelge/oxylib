@@ -28,7 +28,7 @@ Boston, MA 02110-1301, USA.
 """
 
 __version__   = '1.0'
-__copyright__ = 'Andrea Mistrali 2012'
+__copyright__ = 'Andrea Mistrali 2013'
 __author__    = 'akelge@gmail.com'
 __headUrl__  = '$HeadURL$'
 

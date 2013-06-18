@@ -48,6 +48,7 @@ class SQLPlus(object):
     """
 
     def __int__(self): return int(self.id)
+    def __repr__(self): return "<%s(%s)>" % (self.__class__.__name__, self.id)
     def __lt__(self, other): return int(self.id) <  int(other.id)
     def __le__(self, other): return int(self.id) <= int(other.id)
     def __eq__(self, other):
