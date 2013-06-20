@@ -89,6 +89,18 @@ class SQLPlus(object):
         """
         return Session.query(cls).filter(getattr(cls, field) == value).first()
 
+    def updateFromDict(self, dictionary):
+        """
+        Update an object from a dictionary.
+        obj = myClass()
+        obj.updateFromDict({'a':1, 'b':2})
+        obj.a -> 1
+        obj.b -> 2
+        """
+        for k,v in dictionary.items():
+            if hasattr(self, k):
+                setattr(self, k, v)
+
     def update(self, field, value):
         """
         Shortcut to update a field value
@@ -164,7 +176,7 @@ class SQLPlus(object):
         """
         Return formatter object
         """
-        return Formatter(self, fmt)
+        return Formatter(self, fmt).respond()
 
     @property
     def json(self): return Formatter(self).toJSON()

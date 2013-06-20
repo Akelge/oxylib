@@ -24,6 +24,17 @@ import StringIO
 from xml.dom.minidom import parseString
 
 class Formatter(object):
+    """
+    Formatter class. Supports JSON, XML, CSV, HTML and TXT formats.
+    Usage:
+        obj = myClass()
+        f=Formatter(obj, format='json')
+        f.respond()
+    or
+        obj = myClass()
+        formatResponse(obj, 'json')
+    """
+
     formats = {
             'dict': {
                 'fn': 'toDict',
@@ -192,7 +203,7 @@ class Formatter(object):
 
 
     # Pylonesque method to setup response
-    def setResponse(self):
+    def respond(self):
         """
         Set Response with correct status and header
         and fill body with data
@@ -200,4 +211,15 @@ class Formatter(object):
         response.status_int = self.status_int
         response.content_type = self.header
         response.unicode_body = unicode(self)
+
+    setResponse = respond # Legacy
+
+def formatResponse(obj, format):
+    """
+    Utility to compact writing of answers in controllers
+    @param obj objects we want to format
+    @param format output format
+    """
+    Formatter(obj, format).respond()
+
 
