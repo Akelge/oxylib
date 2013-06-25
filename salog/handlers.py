@@ -20,7 +20,7 @@ class SAHandler(logging.Handler):
     \param tablename (\c str) name of the table that would contain log records. Defaults to 'logs'
     \param sessKey (\c str) session key that contains Username. Defaults to 'oxylib.auth.user'
     \param level (\c str) level of logging. Defaults to logging.NOTSET (0)
-    
+
     Usage example:
         \code
         [handler_salog]
@@ -28,7 +28,7 @@ class SAHandler(logging.Handler):
         args = ('PROJECTNAME.model',)
         level = NOTSET
         \endcode
-        
+
     """
     def __init__(self, model,
             tablename="logs",
@@ -57,20 +57,20 @@ class SAHandler(logging.Handler):
                 self.tablename,
                 metadata,
                 schema.Column("id", types.Integer, primary_key=True),
-                schema.Column("date", types.DateTime, default=datetime.now),
+                schema.Column("date", types.TIMESTAMP, default=datetime.now),
                 ## Name of the logger that emitted record.
-                schema.Column("name", types.Unicode(100)),
+                schema.Column("name", types.Unicode(256)),
                 ## Name of the source file of origin.
-                schema.Column("filename", types.Unicode(100)),
+                schema.Column("filename", types.Unicode(256)),
                 ## Line number in the source file of origin.
                 schema.Column("lineno", types.Integer),
                 ## Name of the function of origin.
-                schema.Column("func", types.Unicode(100)),
+                schema.Column("func", types.Unicode(128)),
                 ## Numerical level of logging \see logging.getlevelName
                 schema.Column("level", types.Integer, default=logging.NOTSET),
                 ## Username: anonymous if we do not require authentication
                 ## None if called from controller
-                schema.Column("user", types.Unicode(100), default=None),
+                schema.Column("user", types.Unicode(128), default=None),
                 ## IP address, gotten from environment
                 schema.Column("addr", types.Unicode(15), default=None),
                 schema.Column("msg", types.Unicode(1024), default=u"--MARK--")

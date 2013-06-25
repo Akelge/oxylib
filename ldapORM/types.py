@@ -50,10 +50,10 @@ class LDAPAttribute(object):
         Remember: this function ALWAYS receive a list as value!!!
             
         """
-        log.debug('convert %s' % value)
+        # log.debug('convert %s' % value)
         if not self.list and type(value)==list:
             # Reduce a list to a scalar
-            log.debug('not list -> converting %s to scalar' % value)
+            # log.debug('not list -> converting %s to scalar' % value)
             value = value[0]
 
         if type(value) == list:
@@ -118,8 +118,20 @@ class Datetime(LDAPAttribute):
     """
 
     def _toPython(self, value):
-        log.debug('converting %s to datetime' % value)
+        # log.debug('converting %s to datetime' % value)
         if value:
             return dt.datetime.strptime(value, "%Y%m%d%H%M%SZ")
         else:
             return None
+
+class Relation(LDAPAttribute):
+    """
+    Relation to another LDAPObject class.
+    Usage:
+        Relation('refname', cls, filter)
+    """
+
+    def __init__(self, refname, objclass, ldapFilter, list=False):
+        super(Relation, self).__init__(name=refname, list=list)
+        self.objclass = objclass
+        self.ldapFilter = ldapFilter

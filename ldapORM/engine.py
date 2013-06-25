@@ -9,7 +9,8 @@
 
 
 TODO:
-    Implement caching
+    Implement caching in connection (if usefull)
+    Implement relations between objectClasses
 
 Objects tree
 ------------
@@ -59,13 +60,22 @@ class LDAPConnection(object):
             log.info('Connection established to %s' % ldapURL)
         except ldap.LDAPError, e:
             if type(e.message) == dict and e.message.has_key('desc'):
+                log.warn('Cannot establish connection: %s' % e.message['desc'])
                 raise Exception("LDAP error: %s" % e.message['desc'])
             else:
+                log.warn('Cannot establish connection: %s' % e)
                 raise Exception("LDAP error: %s" % e)
-            raise Exception(e.message.get('desc'))
 
-        # Add LDAPQuery object
-        self.query=LDAPQuery(self)
+        # # Add LDAPQuery object
+        # self.query=LDAPQuery(self)
+
+    def query(self, objclass):
+        """
+        Set up a query and return it
+        """
+        query = LDAPQuery(self, objclass)
+        return query
+        # return query(objclass)
 
 # Query
 class LDAPQuery(object):
@@ -89,37 +99,38 @@ class LDAPQuery(object):
         c.query(ResultClass).scope(ldap.SCOPE_ONELEVEL).get(uniqueAttr)
     """
 
-    _baseDN=''
-    _scope = ldap.SCOPE_SUBTREE
+    baseDN=''
+    scope = ldap.SCOPE_SUBTREE
+    objclass = None
 
-    def __init__(self, connection):
-        self._ldapConnection = connection
-
-    def __call__(self, objclass):
-        self._baseDN=''
-        self._scope = ldap.SCOPE_SUBTREE
-        self._objclass=objclass
-        return self
+    def __init__(self, connection, objclass):
+        log.debug('Init query')
+        self.ldapSession = connection
+        self.objclass=objclass
 
     def __repr__(self):
-        return "<%s(%r)>" % (self.__class__.__name__, self._objclass)
+        return "<%s(%r)>" % (self.__class__.__name__,
+                self.objclass.__name__)
 
     def _search(self, ldapFilter, attrs=None, baseDN=None, scope=None):
+        """
+        Low level LDAP search
+        """
 
-        attrs = attrs or self._objclass.attributes()
-        baseDN = baseDN or self._baseDN
-        scope = scope or self._scope
+        attrs = attrs or self.objclass.attributes()
+        baseDN = baseDN or self.baseDN
+        scope = scope or self.scope
 
         log.info('searching with baseDN: %s, scope: %s, filter: %s, attrs: %s'
                 % (baseDN, scope, ldapFilter, attrs))
         try:
-            result = self._ldapConnection.c.search_s(baseDN,
+            result = self.ldapSession.c.search_s(baseDN,
                     scope, ldapFilter, attrs)
         except Exception, e:
-            log.info('search_s raised %s' % e)
+            log.warn('search_s raised %s' % e)
             raise Exception('search_s error: %s' % e)
 
-        log.debug('result: %s' % result)
+        log.info('result: %s' % result)
         return result
 
     def _map(self, result):
@@ -129,34 +140,22 @@ class LDAPQuery(object):
         (dn, attrs) =  result
         resultDict = { 'dn': dn }
 
-        for attr in self._objclass.ldapAttributes:
+        for attr in self.objclass.ldapAttributes:
+            # attrs is a dict {'ldapAttribute': ldapValue}
             attrVal = attrs.get(attr.name, None)
+            # We build a resultDict, with ldapValues casted to python
             resultDict[attr.name]=attr.toPython(attrVal)
 
-        retObj = self._objclass() # Create returned object
+        retObj = self.objclass(self.ldapSession) # Create returned object
         retObj._map(resultDict) # Fill the returned object
 
         return retObj
 
-    def scope(self, scope):
-        """
-        Set scope for searches
-        """
-        self._scope = scope
-        return self
-
-    def baseDN(self, baseDN):
-        """
-        Set baseDN for searches
-        """
-        self._baseDN = baseDN
-        return self
-
     def get(self, uniqueAttr):
         """
-        Search an object, given the uniqueAttr
+        Search an object, given the uniqueAttr, OO mode
         """
-        ldapFilter = self._objclass._get_filter() % uniqueAttr
+        ldapFilter = self.objclass._get_filter() % uniqueAttr
 
         result = self._search(ldapFilter)
         if len(result)>1:
@@ -169,11 +168,11 @@ class LDAPQuery(object):
 
     def search(self, ldapFilter):
         """
-        Search ldap for objects matching ldapFilter
+        Search ldap for objects matching ldapFilter, OO mode
         @ldapFilter: an LDAP filter
         """
 
-        ldapFilter = self._objclass._search_filter() % ldapFilter
+        ldapFilter = self.objclass._search_filter() % ldapFilter
         result = self._search(ldapFilter)
 
         return map(lambda r: self._map(r), result)
@@ -182,7 +181,7 @@ class LDAPQuery(object):
 
         baseDN = dn
         scope = ldap.SCOPE_BASE
-        ldapFilter = "(objectClass=%s)" % self._objclass.objectClass
+        ldapFilter = "(objectClass=%s)" % self.objclass.objectClass
 
         result = self._search(ldapFilter, baseDN=baseDN, scope=scope)
 
@@ -190,8 +189,6 @@ class LDAPQuery(object):
             return self._map(result[0])
         else:
             return None
-
-
 
 # Result object
 class LDAPObject(object):
@@ -218,6 +215,10 @@ class LDAPObject(object):
     ldapAttributes = ()
     uniqueAttr = ''
     dn = ''
+    ldapSession = None
+
+    def __init__(self, ldapSession=None):
+        self.ldapSession = ldapSession
 
     def __str__(self):
         return str(self.dict)

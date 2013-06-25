@@ -74,6 +74,9 @@ class ErrorCtl(object):
     def Ok(self, format='json'):
         return self.abort(200, 'Ok', 'Ok', format)
 
+    def Created(self, format='json'):
+        return self.abort(201, 'Created', 'Created', format)
+
     def BadRequest(self, error=None, data=None, format='json'):
         """
         The request was wrong for some reason.

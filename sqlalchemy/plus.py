@@ -98,7 +98,7 @@ class SQLPlus(object):
         obj.b -> 2
         """
         for k,v in dictionary.items():
-            if hasattr(self, k):
+            if hasattr(self, k) and v:
                 setattr(self, k, v)
 
     def update(self, field, value):
