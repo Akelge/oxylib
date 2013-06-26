@@ -24,12 +24,6 @@ LDAPObj()
     LDAPAttribute()
 """
 
-try:
-    from pylons import config
-    pylonsEnv=True
-except:
-    pylonsEnv=False
-
 import ldap
 import logging
 
@@ -39,21 +33,22 @@ log = logging.getLogger('ldapORM.engine')
 class LDAPConnection(object):
 
     @classmethod
-    def fromPylonsConfig(cls, prefix='ldap'):
-        if pylonsEnv:
+    def fromPylonsConfig(cls, config=None, prefix='ldap'):
+        if config:
             ldapURL = config.get('%s.url' % prefix)
             ldapDN = config.get('%s.dn' % prefix)
             ldapSecret = config.get('%s.secret' % prefix)
 
             return cls(ldapURL, ldapDN, ldapSecret)
         else:
-            print "Not under pylons env!"
+            log.error("No valid config")
 
     def __init__(self, ldapURL, ldapDN, ldapSecret):
         """
         Bind to LDAP server and prepare query object
         """
 
+        log.debug('Connecting to %s' % ldapURL)
         self.c = ldap.initialize(ldapURL)
         try:
             self.c.bind_s(ldapDN, ldapSecret)
@@ -121,7 +116,7 @@ class LDAPQuery(object):
         baseDN = baseDN or self.baseDN
         scope = scope or self.scope
 
-        log.info('searching with baseDN: %s, scope: %s, filter: %s, attrs: %s'
+        log.debug('searching with baseDN: %s, scope: %s, filter: %s, attrs: %s'
                 % (baseDN, scope, ldapFilter, attrs))
         try:
             result = self.ldapSession.c.search_s(baseDN,
@@ -130,7 +125,7 @@ class LDAPQuery(object):
             log.warn('search_s raised %s' % e)
             raise Exception('search_s error: %s' % e)
 
-        log.info('result: %s' % result)
+        log.debug('result: %s' % result)
         return result
 
     def _map(self, result):
@@ -140,11 +135,17 @@ class LDAPQuery(object):
         (dn, attrs) =  result
         resultDict = { 'dn': dn }
 
-        for attr in self.objclass.ldapAttributes:
-            # attrs is a dict {'ldapAttribute': ldapValue}
-            attrVal = attrs.get(attr.name, None)
-            # We build a resultDict, with ldapValues casted to python
-            resultDict[attr.name]=attr.toPython(attrVal)
+        if self.objclass.ldapAttributes:
+            log.debug('Populating from ldapAttributes')
+            for attr in self.objclass.ldapAttributes:
+                # attrs is a dict {'ldapAttribute': ldapValue}
+                attrVal = attrs.get(attr.name, None)
+                # We build a resultDict, with ldapValues casted to python
+                resultDict[attr.name]=attr.toPython(attrVal)
+        else:
+            log.debug('Populating plain')
+            for k,v in attrs.items():
+                resultDict[k]=v
 
         retObj = self.objclass(self.ldapSession) # Create returned object
         retObj._map(resultDict) # Fill the returned object
@@ -219,6 +220,7 @@ class LDAPObject(object):
 
     def __init__(self, ldapSession=None):
         self.ldapSession = ldapSession
+        pass
 
     def __str__(self):
         return str(self.dict)
@@ -247,8 +249,11 @@ class LDAPObject(object):
         Commodity: convert object attrs into dictionary
         """
         d = { 'dn': self.dn }
-        d.update(dict([(attr, self.__dict__.get(attr, None)) for attr in
+        if self.attributes():
+            d.update(dict([(attr, self.__dict__.get(attr, None)) for attr in
                 self.attributes()]))
+        else:
+            d.update(self.__dict__)
         return d
 
     @classmethod

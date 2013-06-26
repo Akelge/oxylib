@@ -133,6 +133,8 @@ errors raised by authorize(). Example:
 
     from oxylib.auth.middleware import OxylibAuthMiddleware
 
+Remember to load Authentication Middleware before SessionMiddleWare!!!
+
 Then, if we want to use standard library base_plugins we should add:
 
     from oxylib.auth.base_plugins import *
@@ -149,8 +151,7 @@ or something similar
 
         # The Pylons WSGI app
         app = PylonsApp(config=config)
-        [snip]
-        
+
         app = OxylibAuthMiddleware(app, config)
 
         [snip]

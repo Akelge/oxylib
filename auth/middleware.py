@@ -85,7 +85,7 @@ class OxylibAuthMiddleware(object):
 </html>"""
 
     def __init__(self, app, config):
-        log.debug("Cube Auth Middleware init")
+        log.debug("Oxylib Auth Middleware init")
         self.app = app
         self.config = config
 

@@ -9,6 +9,9 @@ from formatter import Formatter
 
 from pylons import response
 
+import logging
+log = logging.getLogger(__name__)
+
 class HTTPCode(object):
     """
     Class for managing HTTP Error codes
@@ -64,18 +67,29 @@ class ErrorCtl(object):
         Basic abort code.
         Set status, header and content of response
         """
+
+        log.debug('abort with code %s' % code)
         h=HTTPCode(code, error, data)
-        f = Formatter(h, format=format)
+        ferr = Formatter(h, format=format)
         response.status_int = code
-        response.content_type = f.header
-        response.unicode_body = unicode(f)
-        # response.content = str(f)
+        response.content_type = ferr.header
+        response.unicode_body = unicode(ferr)
+        # response.content = str(ferr)
 
     def Ok(self, format='json'):
         return self.abort(200, 'Ok', 'Ok', format)
 
     def Created(self, format='json'):
         return self.abort(201, 'Created', 'Created', format)
+
+    def Unauthorized(self, format='json'):
+        return self.abort(401, 'Unauthorized', 'You are not authorized to access the resuource', format)
+
+    def NotAuthenticated(self, format='json'):
+        return self.abort(402, 'Not Authenticated', 'Please login first', format)
+
+    def Forbidden(self, format='json'):
+        return self.abort(403, 'Forbidden', 'Resource unaccessible', format)
 
     def BadRequest(self, error=None, data=None, format='json'):
         """
