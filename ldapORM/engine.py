@@ -32,20 +32,20 @@ log = logging.getLogger('ldapORM.engine')
 # Connection
 class LDAPConnection(object):
 
-    @classmethod
-    def fromPylonsConfig(cls, config=None, prefix='ldap'):
+    def fromPylonsConfig(self, config=None, prefix='ldap'):
         if config:
             ldapURL = config.get('%s.url' % prefix)
             ldapDN = config.get('%s.dn' % prefix)
             ldapSecret = config.get('%s.secret' % prefix)
 
-            return cls(ldapURL, ldapDN, ldapSecret)
+            return self.bind(ldapURL, ldapDN, ldapSecret)
         else:
             log.error("No valid config")
 
-    def __init__(self, ldapURL, ldapDN, ldapSecret):
+    # def __init__(self, ldapURL=None, ldapDN=None, ldapSecret=None):
+    def bind(self, ldapURL, ldapDN, ldapSecret):
         """
-        Bind to LDAP server and prepare query object
+        Bind to LDAP server
         """
 
         log.debug('Connecting to %s' % ldapURL)
@@ -61,16 +61,11 @@ class LDAPConnection(object):
                 log.warn('Cannot establish connection: %s' % e)
                 raise Exception("LDAP error: %s" % e)
 
-        # # Add LDAPQuery object
-        # self.query=LDAPQuery(self)
-
     def query(self, objclass):
         """
-        Set up a query and return it
+        Set up a query object and return it
         """
-        query = LDAPQuery(self, objclass)
-        return query
-        # return query(objclass)
+        return LDAPQuery(self, objclass)
 
 # Query
 class LDAPQuery(object):
@@ -101,7 +96,7 @@ class LDAPQuery(object):
     def __init__(self, connection, objclass):
         log.debug('Init query')
         self.ldapSession = connection
-        self.objclass=objclass
+        self.objclass = objclass
 
     def __repr__(self):
         return "<%s(%r)>" % (self.__class__.__name__,
@@ -219,7 +214,7 @@ class LDAPObject(object):
     ldapSession = None
 
     def __init__(self, ldapSession=None):
-        self.ldapSession = ldapSession
+        # self.ldapSession = ldapSession
         pass
 
     def __str__(self):
