@@ -93,6 +93,9 @@ class LDAPQuery(object):
     scope = ldap.SCOPE_SUBTREE
     objclass = None
 
+    sorting = False
+    sortReverse = False
+
     def __init__(self, connection, objclass):
         log.debug('Init query')
         self.ldapSession = connection
@@ -150,6 +153,11 @@ class LDAPQuery(object):
     def get(self, uniqueAttr):
         """
         Search an object, given the uniqueAttr, OO mode
+
+        @param uniqueAttr: value of uniqueAttribute to search
+
+        will search for
+        (&(objectClass=resultObjectClass)(resultObjectClassUniqueAttr=uniqueAttr))
         """
         ldapFilter = self.objclass._get_filter() % uniqueAttr
 
@@ -166,14 +174,40 @@ class LDAPQuery(object):
         """
         Search ldap for objects matching ldapFilter, OO mode
         @ldapFilter: an LDAP filter
+
+        will search for
+        (&(objectClass=resultObjectClass)(ldapFilter))
         """
 
         ldapFilter = self.objclass._search_filter() % ldapFilter
         result = self._search(ldapFilter)
 
-        return map(lambda r: self._map(r), result)
+        retList =  map(lambda r: self._map(r), result)
+        if self.sorting:
+            retList.sort(key=self.sortKeyFn, reverse=self.sortReverse)
+        return retList
+
+
+    def all(self):
+        """
+        Return all objects matching objectClass
+
+        will search for
+        (objectClass=resultObjectClass)
+
+        """
+        ldapFilter = '(objectClass=%s)' % self.objclass.objectClass
+        result = self._search(ldapFilter)
+
+        retList = map(lambda r: self._map(r), result)
+        if self.sorting:
+            retList.sort(key=self.sortKeyFn, reverse=self.sortReverse)
+        return retList
 
     def dn(self, dn):
+        """
+        Search for a given dn
+        """
 
         baseDN = dn
         scope = ldap.SCOPE_BASE
@@ -185,6 +219,17 @@ class LDAPQuery(object):
             return self._map(result[0])
         else:
             return None
+
+    def sort(self, attribute, reverse=False):
+        """
+        Sorting.
+        Build key Function for sorting and set direction
+        """
+        self.sorting = True
+        self.sortKeyFn = lambda e: e.__getattribute__(attribute)
+        self.sortReverse = reverse
+
+        return self
 
 # Result object
 class LDAPObject(object):

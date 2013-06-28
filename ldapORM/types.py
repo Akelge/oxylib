@@ -68,7 +68,17 @@ class LDAPAttribute(object):
 # Custom types
 ###########################
 
-class String(LDAPAttribute): pass
+class String(LDAPAttribute):
+    """
+    String LDAP Attribute.
+    Decode to UTF8
+    """
+
+    def _toPython(self, value):
+        if value:
+            return value.decode('utf8')
+        else:
+            return value
 
 class Integer(LDAPAttribute):
     """
