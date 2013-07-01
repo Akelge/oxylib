@@ -105,7 +105,11 @@ class LDAPQuery(object):
         return "<%s(%r)>" % (self.__class__.__name__,
                 self.objclass.__name__)
 
-    def _search(self, ldapFilter, attrs=None, baseDN=None, scope=None):
+    def _search(self, ldapFilter,
+            attrs=None,
+            baseDN=None,
+            scope=None,
+            attrsonly=0):
         """
         Low level LDAP search
         """
@@ -118,7 +122,11 @@ class LDAPQuery(object):
                 % (baseDN, scope, ldapFilter, attrs))
         try:
             result = self.ldapSession.c.search_s(baseDN,
-                    scope, ldapFilter, attrs)
+                    scope,
+                    ldapFilter,
+                    attrs,
+                    attrsonly)
+
         except Exception, e:
             log.warn('search_s raised %s' % e)
             raise Exception('search_s error: %s' % e)
@@ -187,6 +195,16 @@ class LDAPQuery(object):
             retList.sort(key=self.sortKeyFn, reverse=self.sortReverse)
         return retList
 
+
+    def count(self, ldapFilter):
+        """
+        Return count of object matching LDAP query
+        """
+        ldapFilter = self.objclass._search_filter() % ldapFilter
+        result = self._search(ldapFilter, attrs=[],
+                attrsonly=1)
+
+        return len(result)
 
     def all(self):
         """
