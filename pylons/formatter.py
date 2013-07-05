@@ -20,8 +20,6 @@ except:
 import csv
 import StringIO
 
-# XML
-from xml.dom.minidom import parseString
 
 class Formatter(object):
     """
@@ -36,43 +34,43 @@ class Formatter(object):
     """
 
     formats = {
-            'dict': {
-                'fn': 'toDict',
-                'type': 'text/plain;charset=utf-8'
-                },
+        'dict': {
+        'fn': 'toDict',
+        'type': 'text/plain;charset=utf-8'
+        },
 
-            'xml': {
-                'fn': 'toXML',
-                'type': 'text/xml;charset=utf-8'
-                },
-            'json': {
-                'fn': 'toJSON',
-                'type': 'application/json;charset=utf-8'
-                },
-            'csv': {
-                'fn': 'toCSV',
-                'type': 'text/csv;charset=utf-8'
-                },
-            'html': {
-                'fn': 'toHTML',
-                'type': 'text/html;charset=utf-8'
-                },
-            'txt': {
-                'fn': 'toTXT',
-                'type': 'text/plain;charset=utf-8'
-                }
-            }
+        'xml': {
+        'fn': 'toXML',
+        'type': 'text/xml;charset=utf-8'
+        },
+        'json': {
+        'fn': 'toJSON',
+        'type': 'application/json;charset=utf-8'
+        },
+        'csv': {
+        'fn': 'toCSV',
+        'type': 'text/csv;charset=utf-8'
+        },
+        'html': {
+        'fn': 'toHTML',
+        'type': 'text/html;charset=utf-8'
+        },
+        'txt': {
+        'fn': 'toTXT',
+        'type': 'text/plain;charset=utf-8'
+        }
+    }
 
     def __init__(self, obj, format='json'):
         if format.lower() in self.formats.keys():
-            self.format=format.lower()
+            self.format = format.lower()
         else:
-            raise Exception,"format %s not supported" % format
+            raise Exception("format %s not supported" % format)
 
         self.status_int = 200
         self.objDict = self.toDict(obj)
 
-        if isinstance(obj, list): # For XML generation we need to know class name
+        if isinstance(obj, list):  # For XML generation we need to know class name
             if len(obj):
                 self.obj_class = obj[0].__class__.__name__
             else:
@@ -80,12 +78,15 @@ class Formatter(object):
         else:
             self.obj_class = obj.__class__.__name__
 
-    def __repr__(self): return "<Formatter(format='%s')>" % self.format
+    def __repr__(self):
+        return "<Formatter(format='%s')>" % self.format
 
-    def __str__(self): return getattr(self, self.formats[self.format]['fn'])()
+    def __str__(self):
+        return getattr(self, self.formats[self.format]['fn'])()
 
     @property
-    def header(self): return self.formats[self.format]['type']
+    def header(self):
+        return self.formats[self.format]['type']
 
     def toDict(self, obj=None):
         """
@@ -100,26 +101,26 @@ class Formatter(object):
         if isinstance(obj, list) or isinstance(obj, set):
             return [self.toDict(item) for item in obj]
         elif isinstance(obj, dict):
-            newDict={}
-            for k,v in obj.items():
-                newDict[k]=self.toDict(v)
+            newDict = {}
+            for k, v in obj.items():
+                newDict[k] = self.toDict(v)
             return newDict
-        elif hasattr(obj, 'toDict'): # Object has a dict method
+        elif hasattr(obj, 'toDict'):  # Object has a dict method
             try:
                 return obj.toDict()
             except:
                 pass
-        elif hasattr(obj, '__table__'): # Alchemy Object, build dict on the fly
+        elif hasattr(obj, '__table__'):  # Alchemy Object, build dict on the fly
             return dict([(col, getattr(obj, col, None)) for col in obj.__table__.c.keys()])
         elif hasattr(obj, '__dict__'):
-            return obj.__dict__ # Fallback
+            return obj.__dict__  # Fallback
         else:
             return obj
-            raise Exception, "Object type '%s' is not supported" % type(obj)
+            raise Exception("Object type '%s' is not supported" % type(obj))
 
     def toJSON(self):
         """
-        If we pass a single record work as toJSONsingle, else cycle all items and call 
+        If we pass a single record work as toJSONsingle, else cycle all items and call
         toJSONsingle on them
         """
         if config['debug']:
@@ -129,7 +130,7 @@ class Formatter(object):
 
     def toCSV(self):
         csv.register_dialect('ourdialect', delimiter=';', quoting=csv.QUOTE_NONE)
-        fp=StringIO.StringIO()
+        fp = StringIO.StringIO()
         csvout = csv.writer(fp, 'ourdialect')
         if isinstance(self.objDict, list):
             csvout.writerow(self.objDict[0].keys())
@@ -140,7 +141,6 @@ class Formatter(object):
         fp.seek(0)
         return fp.read()
 
-   
     def __buildXML(self, root):
         """
         basic converter to XML
@@ -164,10 +164,10 @@ class Formatter(object):
     def toXML(self):
         className = self.obj_class.lower()
         if isinstance(self.objDict, list):
-            d =  {'%ss' % className : [{'%s' % className : i} for i in self.objDict]}
+            d = {'%ss' % className: [{'%s' % className: i} for i in self.objDict]}
             xml = self.__buildXML(d)
         else:
-            xml = self.__buildXML({'%s' % className : self.objDict})
+            xml = self.__buildXML({'%s' % className: self.objDict})
         return '<?xml version="1.0" encoding="UTF-8"?>%s' % xml
 
     def toHTML(self):
@@ -189,18 +189,17 @@ class Formatter(object):
             <pre>%s</pre>""" % (tmpl, self.toTXT())
 
     def toTXT(self):
-        output=[]
+        output = []
         if isinstance(self.objDict, list):
             for d in self.objDict:
                 output.append('{\n')
-                for k,v in d.items():
-                    output.append('%s: %s\n' % (k,v))
+                for k, v in d.items():
+                    output.append('%s: %s\n' % (k, v))
                 output.append('}\n')
         elif isinstance(self.objDict, dict):
-                for k,v in self.objDict.items():
-                    output.append('%s: %s\n' % (k,v))
+                for k, v in self.objDict.items():
+                    output.append('%s: %s\n' % (k, v))
         return ''.join(output)
-
 
     # Pylonesque method to setup response
     def respond(self):
@@ -212,7 +211,8 @@ class Formatter(object):
         response.content_type = self.header
         response.unicode_body = unicode(self)
 
-    setResponse = respond # Legacy
+    setResponse = respond  # Legacy
+
 
 def formatResponse(obj, format):
     """
@@ -221,5 +221,3 @@ def formatResponse(obj, format):
     @param format output format
     """
     Formatter(obj, format).respond()
-
-

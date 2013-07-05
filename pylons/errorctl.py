@@ -12,29 +12,31 @@ from pylons import response
 import logging
 log = logging.getLogger(__name__)
 
+
 class HTTPCode(object):
     """
     Class for managing HTTP Error codes
     """
     http_codes = {
-            '200': 'OK',
-            '201': 'Created',
-            '204': 'No Content',
+        '200': 'OK',
+        '201': 'Created',
+        '204': 'No Content',
 
-            '300': 'Multiple Choices',
-            '301': 'Moved Permanently',
-            '303': 'See Other',
-            '304': 'Not Modified',
-            '307': 'Temporary Redirect',
+        '300': 'Multiple Choices',
+        '301': 'Moved Permanently',
+        '303': 'See Other',
+        '304': 'Not Modified',
+        '307': 'Temporary Redirect',
 
-            '400': 'Bad Request',
-            '401': 'Unauthorized',
-            '403': 'Forbidden',
-            '404': 'Not Found',
-            '405': 'Method Not Allowed',
-            '409': 'Conflict',
-            '412': 'Precondition Failed'
-            }
+        '400': 'Bad Request',
+        '401': 'Unauthorized',
+        '403': 'Forbidden',
+        '404': 'Not Found',
+        '405': 'Method Not Allowed',
+        '409': 'Conflict',
+        '412': 'Precondition Failed'
+    }
+
     @classmethod
     def codes(cls):
         return cls.http_codes
@@ -50,9 +52,10 @@ class HTTPCode(object):
 
     def toDict(self):
         return dict(status=self.status,
-                text=self.text,
-                error=self.error,
-                data=self.data)
+                    text=self.text,
+                    error=self.error,
+                    data=self.data)
+
 
 class ErrorCtl(object):
     """
@@ -69,7 +72,7 @@ class ErrorCtl(object):
         """
 
         log.debug('abort with code %s' % code)
-        h=HTTPCode(code, error, data)
+        h = HTTPCode(code, error, data)
         ferr = Formatter(h, format=format)
         response.status_int = code
         response.content_type = ferr.header
@@ -128,7 +131,3 @@ class ErrorCtl(object):
         Usually returned by a failed form validation
         """
         return self.abort(412, error, data, format)
-
-
-
-

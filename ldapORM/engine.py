@@ -29,6 +29,7 @@ import logging
 
 log = logging.getLogger('ldapORM.engine')
 
+
 # Connection
 class LDAPConnection(object):
 
@@ -54,7 +55,7 @@ class LDAPConnection(object):
             self.c.bind_s(ldapDN, ldapSecret)
             log.info('Connection established to %s' % ldapURL)
         except ldap.LDAPError, e:
-            if type(e.message) == dict and e.message.has_key('desc'):
+            if type(e.message) == dict and 'desc' in e.message:
                 log.warn('Cannot establish connection: %s' % e.message['desc'])
                 raise Exception("LDAP error: %s" % e.message['desc'])
             else:
@@ -68,6 +69,8 @@ class LDAPConnection(object):
         return LDAPQuery(self, objclass)
 
 # Query
+
+
 class LDAPQuery(object):
     """
     Execute a search on LDAP.
@@ -76,7 +79,7 @@ class LDAPQuery(object):
 
         # return a scalar result, an instance of ResultClass, with LDAP
         # Attributes mapped on ResultClass attributes
-        c.query(ResultClass).get(uniqueAttr) 
+        c.query(ResultClass).get(uniqueAttr)
 
         # return a list of ResultClass instances, with LDAP Attributes mapped
         # on ResultClass attributes
@@ -89,7 +92,7 @@ class LDAPQuery(object):
         c.query(ResultClass).scope(ldap.SCOPE_ONELEVEL).get(uniqueAttr)
     """
 
-    baseDN=''
+    baseDN = ''
     scope = ldap.SCOPE_SUBTREE
     objclass = None
 
@@ -103,13 +106,13 @@ class LDAPQuery(object):
 
     def __repr__(self):
         return "<%s(%r)>" % (self.__class__.__name__,
-                self.objclass.__name__)
+                             self.objclass.__name__)
 
     def _search(self, ldapFilter,
-            attrs=None,
-            baseDN=None,
-            scope=None,
-            attrsonly=0):
+                attrs=None,
+                baseDN=None,
+                scope=None,
+                attrsonly=0):
         """
         Low level LDAP search
         """
@@ -119,13 +122,13 @@ class LDAPQuery(object):
         scope = scope or self.scope
 
         log.debug('searching with baseDN: %s, scope: %s, filter: %s, attrs: %s'
-                % (baseDN, scope, ldapFilter, attrs))
+                  % (baseDN, scope, ldapFilter, attrs))
         try:
             result = self.ldapSession.c.search_s(baseDN,
-                    scope,
-                    ldapFilter,
-                    attrs,
-                    attrsonly)
+                                                 scope,
+                                                 ldapFilter,
+                                                 attrs,
+                                                 attrsonly)
 
         except Exception, e:
             log.warn('search_s raised %s' % e)
@@ -138,8 +141,8 @@ class LDAPQuery(object):
         """
         Map a result on a new object
         """
-        (dn, attrs) =  result
-        resultDict = { 'dn': dn }
+        (dn, attrs) = result
+        resultDict = {'dn': dn}
 
         if self.objclass.ldapAttributes:
             log.debug('Populating from ldapAttributes')
@@ -147,14 +150,14 @@ class LDAPQuery(object):
                 # attrs is a dict {'ldapAttribute': ldapValue}
                 attrVal = attrs.get(attr.name, None)
                 # We build a resultDict, with ldapValues casted to python
-                resultDict[attr.name]=attr.toPython(attrVal)
+                resultDict[attr.name] = attr.toPython(attrVal)
         else:
             log.debug('Populating plain')
-            for k,v in attrs.items():
-                resultDict[k]=v
+            for k, v in attrs.items():
+                resultDict[k] = v
 
-        retObj = self.objclass(self.ldapSession) # Create returned object
-        retObj._map(resultDict) # Fill the returned object
+        retObj = self.objclass(self.ldapSession)  # Create returned object
+        retObj._map(resultDict)  # Fill the returned object
 
         return retObj
 
@@ -170,7 +173,7 @@ class LDAPQuery(object):
         ldapFilter = self.objclass._get_filter() % uniqueAttr
 
         result = self._search(ldapFilter)
-        if len(result)>1:
+        if len(result) > 1:
             raise Exception("more than one result, something went wrong!!")
 
         if result:
@@ -190,11 +193,10 @@ class LDAPQuery(object):
         ldapFilter = self.objclass._search_filter() % ldapFilter
         result = self._search(ldapFilter)
 
-        retList =  map(lambda r: self._map(r), result)
+        retList = map(lambda r: self._map(r), result)
         if self.sorting:
             retList.sort(key=self.sortKeyFn, reverse=self.sortReverse)
         return retList
-
 
     def count(self, ldapFilter):
         """
@@ -202,7 +204,7 @@ class LDAPQuery(object):
         """
         ldapFilter = self.objclass._search_filter() % ldapFilter
         result = self._search(ldapFilter, attrs=[],
-                attrsonly=1)
+                              attrsonly=1)
 
         return len(result)
 
@@ -250,6 +252,8 @@ class LDAPQuery(object):
         return self
 
 # Result object
+
+
 class LDAPObject(object):
     """
     Generic class with LDAP generic methods: build filters, map an LDAP result
@@ -270,7 +274,7 @@ class LDAPObject(object):
 
     """
 
-    objectClass = None # Which objectClass distinguish this object
+    objectClass = None  # Which objectClass distinguish this object
     ldapAttributes = ()
     uniqueAttr = ''
     dn = ''
@@ -285,7 +289,7 @@ class LDAPObject(object):
 
     def __repr__(self):
         return "<%s('%s')>" % (self.__class__.__name__,
-                self.__dict__.get(self.uniqueAttr, None))
+                               self.__dict__.get(self.uniqueAttr, None))
 
     def __eq__(self, other):
         return self.__getattribute__(self.uniqueAttr) == other.__getattribute__(other.uniqueAttr)
@@ -306,10 +310,10 @@ class LDAPObject(object):
         """
         Commodity: convert object attrs into dictionary
         """
-        d = { 'dn': self.dn }
+        d = {'dn': self.dn}
         if self.attributes():
             d.update(dict([(attr, self.__dict__.get(attr, None)) for attr in
-                self.attributes()]))
+                           self.attributes()]))
         else:
             d.update(self.__dict__)
         return d

@@ -7,13 +7,13 @@ Misc utilities module
 
 $Id$
 """
-__headUrl__  = '$HeadURL$'
+__headUrl__ = '$HeadURL$'
 
-import re
 import sys
 
 # Backwards compat
 from customtypes import *
+
 
 def checkIfPylons():
     """
@@ -23,7 +23,7 @@ def checkIfPylons():
     try:
         from pylons import request, session
         try:
-            session['@oxylib_checkIfPylons@']=1
+            session['@oxylib_checkIfPylons@'] = 1
         except TypeError:
             return (False, None, None)
         del (session['@oxylib_checkIfPylons@'])
@@ -33,6 +33,7 @@ def checkIfPylons():
     return (True, request, session)
 
 # *************************************************************************** #
+
 
 def Property(func):
     """
@@ -73,4 +74,3 @@ def getException():
         value = m
         return (exception, value)
     return (None, None)
-

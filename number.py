@@ -4,12 +4,12 @@ CUBE standard library
 
 $Id$
 """
-__headUrl__  = '$HeadURL$'
+__headUrl__ = '$HeadURL$'
 
 import babel.numbers as babelnumbers
-from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR #, ROUND_05UP, ROUND_UP, ROUND_DOWN
+from decimal import Decimal, ROUND_HALF_UP, ROUND_CEILING, ROUND_FLOOR  # , ROUND_05UP, ROUND_UP, ROUND_DOWN
 
-############################################################################################################################
+##########################################################################
 
 # Some usefull commodities
 ZERO = Decimal('0.0')
@@ -18,7 +18,8 @@ TEN = Decimal('10.0')
 TWO = Decimal('2.0')
 HUNDRED = Decimal('100.0')
 
-####################################################################################################################
+##########################################################################
+
 
 def formatDecimal(value, locale, decimals=0):
     """
@@ -28,10 +29,12 @@ def formatDecimal(value, locale, decimals=0):
     @param decimals decimal places to use, default (from format_decimal) is 3 places without rounding
     @return formatted number
     """
-    format='###,###'
-    if decimals > 0: format='###,###.%s' % ('0'*decimals)
+    format = '###,###'
+    if decimals > 0:
+        format = '###,###.%s' % ('0' * decimals)
 
     return babelnumbers.format_decimal(value, format=format, locale=locale)
+
 
 def parseDecimal(string, locale):
     """
@@ -42,20 +45,25 @@ def parseDecimal(string, locale):
     """
     return toDecimal(babelnumbers.parse_decimal(string, locale=locale))
 
+
 def toDecimal(value):
     """
     @brief Converts a value to Decimal
     @param value a string, int, float or Decimal
     @return Decimal
     """
-    if value == None: return None
-    if type(value)==type(float()): return Decimal("%f" % value)
-    if type(value)==type(Decimal()): return value
+    if value is None:
+        return None
+    if type(value) == type(float()):
+        return Decimal("%f" % value)
+    if type(value) == type(Decimal()):
+        return value
     return Decimal(str(value))
 
-####################################################################################################################
+##########################################################################
 
-def roundDecimal(value,decimals=0):
+
+def roundDecimal(value, decimals=0):
     """
     @brief Rounds a Decimal (0-4 -> down, 5-9 -> up)
     @param value a string, int, float or Decimal
@@ -64,7 +72,8 @@ def roundDecimal(value,decimals=0):
     """
     return toDecimal(value).quantize(ONE / (TEN ** decimals), ROUND_HALF_UP)
 
-def ceilDecimal(value,decimals=0):
+
+def ceilDecimal(value, decimals=0):
     """
     @brief Rounds a Decimal (0-9 -> up)
     @param value Decimal
@@ -73,7 +82,8 @@ def ceilDecimal(value,decimals=0):
     """
     return toDecimal(value).quantize(ONE / (TEN ** decimals), ROUND_CEILING)
 
-def floorDecimal(value,decimals=0):
+
+def floorDecimal(value, decimals=0):
     """
     @brief Rounds a Decimal (0-9 -> down)
     @param value Decimal
@@ -82,21 +92,22 @@ def floorDecimal(value,decimals=0):
     """
     return toDecimal(value).quantize(ONE / (TEN ** decimals), ROUND_FLOOR)
 
-####################################################################################################################
+##########################################################################
 
-def humanBytes(bytes,locale,reuse=False):
 
-    m = ['B','kB','MB','GB','TB','PB','EB','ZB','YB']
+def humanBytes(bytes, locale, reuse=False):
+
+    m = ['B', 'kB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
 
     limit = 1024
     r = bytes
     exp = 0
 
     while(r > limit):
-        r = r/1024.0
-        exp+=1
+        r = r / 1024.0
+        exp += 1
 
     if reuse:
-        return (roundDecimal(r,3),m[exp])
+        return (roundDecimal(r, 3), m[exp])
     else:
-        return "%s %s" % (formatDecimal(r,locale,1),m[exp])
+        return "%s %s" % (formatDecimal(r, locale, 1), m[exp])

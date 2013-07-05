@@ -10,12 +10,11 @@
 """
 
 import logging
-from oxylib.auth import sessionLoad, getConfig, ckey, login, AuthenticatedUser, sessionSave
+from oxylib.auth import ckey, AuthenticatedUser
 from oxylib.pylons.utils import construct_url
 from pylons.util import call_wsgi_application
 from pylons.templating import render_mako as render
 from pylons import tmpl_context as c
-from paste.request import parse_formvars
 import webob
 
 log = logging.getLogger(__name__)
@@ -75,8 +74,8 @@ class OxylibAuthMiddleware(object):
            You are not authorized to display the requested page
            <hr/>
            <div style="text-align:right;">
-              <a href="javascript:window.history.back();">back</a> - 
-              <a href="%s">home</a> - 
+              <a href="javascript:window.history.back();">back</a> -
+              <a href="%s">home</a> -
               <a href="%s">logout</a>
            </div>
         </div>
@@ -101,31 +100,33 @@ class OxylibAuthMiddleware(object):
         log.debug('Setup finished')
 
     def setup(self, config):
-        pairs=[(k.split('.')[-1], config[k]) for k in config.keys() if k.startswith('oxylib.auth.m')]
+        pairs = [(k.split('.')[-1], config[k]) for k in config.keys() if k.startswith(
+            'oxylib.auth.m')]
         for p in pairs:
             setattr(self, p[0], p[1])
             if p[0] == 'loginController':
                 self.extLogin = True
 
     def _makeurl(self, root, path):
-         #combine root with path_info and query_string
-         if (path[0]=='/'):
-             path = path[1:]
-         return "%s%s" % (root, path)
+        # combine root with path_info and query_string
+        if (path[0] == '/'):
+            path = path[1:]
+        return "%s%s" % (root, path)
 
-    def  __call__(self, environ, start_response):
+    def __call__(self, environ, start_response):
         session = environ['beaker.session']
 
-        if session.has_key(ckey('user')):
-            user=session.get(ckey('user'))
-            environ['REMOTE_USER']=user.username
+        if ckey('user') in session:
+            user = session.get(ckey('user'))
+            environ['REMOTE_USER'] = user.username
             # environ[ckey('user')] = user
 
-        environ[ckey('active')]=True
+        environ[ckey('active')] = True
 
-        status, headers, app_iter, exc_info = call_wsgi_application(self.app, environ, catch_exc_info=True)
+        status, headers, app_iter, exc_info = call_wsgi_application(
+            self.app, environ, catch_exc_info=True)
 
-        session[ckey('active')]=True
+        session[ckey('active')] = True
         session.save()
 
         root = construct_url(environ, path_info='/', with_query_string=False)
@@ -138,7 +139,7 @@ class OxylibAuthMiddleware(object):
 
        #  # No PATH_INFO
         if environ['PATH_INFO'] == '':
-            #Hack for static files
+            # Hack for static files
             log.debug('no PATH_INFO, returning app_iter')
             start_response(status, headers)
             return app_iter
@@ -152,7 +153,7 @@ class OxylibAuthMiddleware(object):
             form_password = formvars.get('password')
 
             if form_username and form_password:
-                user=AuthenticatedUser(form_username, form_password, session)
+                user = AuthenticatedUser(form_username, form_password, session)
                 # After calling AuthenticatedUser __init__ we have a real session
                 # so we could use session._sess
                 if user.isAuthenticated():
@@ -161,15 +162,14 @@ class OxylibAuthMiddleware(object):
                     log.debug('perms %s', user.perms)
                 else:
                     log.info('%s authentication failed', form_username)
-                    session._sess[ckey('_errors')]=user.errors
+                    session._sess[ckey('_errors')] = user.errors
             else:
-                session._sess[ckey('_errors')]=[('auth', 'generic', 'Missing credentials')]
-
+                session._sess[ckey('_errors')] = [('auth', 'generic', 'Missing credentials')]
 
             # go to AFTERLOGIN, STORED ENTRYPAGE or /
             goto = self.afterLoginGoto or session._sess.get(ckey('_entry')) or root
 
-            if session._sess.has_key(ckey('_entry')):
+            if ckey('_entry') in session._sess:
                 del session._sess[ckey('_entry')]
             session.save()
 
@@ -181,10 +181,10 @@ class OxylibAuthMiddleware(object):
         if self.logoutTrap == url[-len(self.logoutTrap):]:
             log.debug('Triggered logout')
             log.info('%s logout' % session._sess[ckey('user')].username)
-            if session._sess.has_key(ckey('user')):
+            if ckey('user') in session._sess:
                 del session._sess[ckey('user')]
                 session._sess.save()
-            if environ.has_key('REMOTE_USER'):
+            if 'REMOTE_USER' in environ:
                 del environ['REMOTE_USER']
             goto = self.afterLogoutGoto or '/'
             log.debug('logout, going to %s' % goto)
@@ -200,7 +200,7 @@ class OxylibAuthMiddleware(object):
                 c.logouturl = self._makeurl(root, self.logoutTrap)
                 return render(self.unauthorizePage)
             else:
-                return [self.defaultNoauthHtml % (self._makeurl(root, '/'),self._makeurl(root, self.logoutTrap))]
+                return [self.defaultNoauthHtml % (self._makeurl(root, '/'), self._makeurl(root, self.logoutTrap))]
 
         # 401 - Unauthenticated (Login)
         if status[:3] == '401':
@@ -208,10 +208,10 @@ class OxylibAuthMiddleware(object):
             start_response('200 OK', [('Content-Type', 'text/html; charset=UTF-8')])
 
             # Save in session where we are from
-            session._sess[ckey('_entry')]=construct_url(environ)
+            session._sess[ckey('_entry')] = construct_url(environ)
 
-            errors = session._sess.get(ckey('_errors'),[])
-            if session._sess.has_key(ckey('_errors')):
+            errors = session._sess.get(ckey('_errors'), [])
+            if ckey('_errors') in session._sess:
                 del session._sess[ckey('_errors')]
             session._sess.save()
 
@@ -224,17 +224,16 @@ class OxylibAuthMiddleware(object):
 
 ###########
     def loginFormRender(self, errors=[]):
-        errorsOut=[]
+        errorsOut = []
         for e in errors:
             errorsOut.append("<b>%s (%s)</b> %s" % (e[1], e[0], e[2]))
-        errors='<br />\n'.join(errorsOut)
+        errors = '<br />\n'.join(errorsOut)
 
         if self.loginForm:
-            c.action=self.loginTrap
-            c.errors=errors
-            t=render(self.loginForm)
+            c.action = self.loginTrap
+            c.errors = errors
+            t = render(self.loginForm)
         else:
             t = self.defaultLoginHtml % (self.loginTrap, '<br />\n'.join(errorsOut))
 
         return str(t)
-

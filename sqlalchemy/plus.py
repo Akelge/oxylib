@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- encoding: utf-8 -*-
 """
 SQL Plus class
 
@@ -16,12 +16,13 @@ from sqlalchemy.ext.declarative import declared_attr
 
 from oxylib.Money import MoneyInterface, CurrencyInterface
 
-from oxylib.pylons.formatter import Formatter, json
+from oxylib.pylons.formatter import Formatter
 
 Session = scoped_session(sessionmaker())
 session = Session
 
-metadata=MetaData()
+metadata = MetaData()
+
 
 def init_oxylib(pySession, pyMetadata):
     """
@@ -32,9 +33,9 @@ def init_oxylib(pySession, pyMetadata):
     """
     global Session, metadata, engine
 
-    metadata=pyMetadata
-    Session=pySession
-    engine=Session.bind.engine
+    metadata = pyMetadata
+    Session = pySession
+    engine = Session.bind.engine
 
 
 class SQLError(Exception):
@@ -42,17 +43,26 @@ class SQLError(Exception):
 
 # ###########################################################################################################
 
+
 class SQLPlus(object):
     """
     Class with utilities to work on tables with integer PK called 'id'
     """
 
-    def __int__(self): return int(self.id)
-    def __repr__(self): return "<%s(%s)>" % (self.__class__.__name__, self.id)
-    def __lt__(self, other): return int(self.id) <  int(other.id)
-    def __le__(self, other): return int(self.id) <= int(other.id)
+    def __int__(self):
+        return int(self.id)
+
+    def __repr__(self):
+        return "<%s(%s)>" % (self.__class__.__name__, self.id)
+
+    def __lt__(self, other):
+        return int(self.id) < int(other.id)
+
+    def __le__(self, other):
+        return int(self.id) <= int(other.id)
+
     def __eq__(self, other):
-        if other != None:
+        if other is not None:
             return self.id == other.id
         else:
             return False
@@ -65,9 +75,11 @@ class SQLPlus(object):
         Shortcut. Return all records from a table, ordered by id, as default
         Filter is a list of conditions
         """
-        query=Session.query(cls)
-        if filter: query.filter(and_(*filter))
-        if order_by: query=query.order_by(getattr(cls, order_by))
+        query = Session.query(cls)
+        if filter:
+                query.filter(and_(*filter))
+        if order_by:
+                query = query.order_by(getattr(cls, order_by))
         return query.all()
 
     @classmethod
@@ -97,7 +109,7 @@ class SQLPlus(object):
         obj.a -> 1
         obj.b -> 2
         """
-        for k,v in dictionary.items():
+        for k, v in dictionary.items():
             if hasattr(self, k) and v:
                 setattr(self, k, v)
 
@@ -144,29 +156,29 @@ class SQLPlus(object):
         """
         import copy
 
-        retDict={}
+        retDict = {}
         props = copy.copy(self.__mapper__._props)
         # Clean composite columns, delete all columns that compose those
-        for (k,v) in props.items():
+        for (k, v) in props.items():
             if isinstance(v, orm.properties.CompositeProperty):
                 for col in props[k].columns:
                     props.pop(col.name)
 
-        for (k,v) in props.items():
+        for (k, v) in props.items():
             val = getattr(self, k)
             if type(val) in [types.Time, types.Date, types.DateTime]:
-                    retDict[k]=val.isoformat()
+                    retDict[k] = val.isoformat()
             elif hasattr(val, 'toDict') and val:
-                retDict[k] = val.toDict() # toDict has to be implemented for complex values
+                retDict[k] = val.toDict()  # toDict has to be implemented for complex values
             else:
-                retDict[k]=val
+                retDict[k] = val
         return retDict
 
     # Create from dict/JSON
     @classmethod
     def fromDict(cls, dict):
         obj = cls()
-        for k,v in dict.items():
+        for k, v in dict.items():
             if hasattr(obj, k):
                 setattr(obj, k, obj.column(k).type.python_type(v))
         return obj
@@ -179,10 +191,12 @@ class SQLPlus(object):
         return Formatter(self, fmt).respond()
 
     @property
-    def json(self): return Formatter(self).toJSON()
+    def json(self):
+        return Formatter(self).toJSON()
 
     @property
-    def csv(self): return Formatter(self).toCSV()
+    def csv(self):
+        return Formatter(self).toCSV()
     ##
 
 # ###########################################################################################################
@@ -213,14 +227,21 @@ class CurrencySQLAlchemy(SQLPlus, CurrencyInterface):
     html = schema.Column(types.Unicode, nullable=False, default=u'&curren;')
 
     @classmethod
-    def currencies(cls): return cls.all()
+    def currencies(cls):
+        return cls.all()
 
     @classmethod
-    def byId(cls, id): return Session.query(cls).get(id)
+    def byId(cls, id):
+        return Session.query(cls).get(id)
+
     @classmethod
-    def byLabel(cls, label): return cls.get_by('label', label)
+    def byLabel(cls, label):
+        return cls.get_by('label', label)
+
     @classmethod
-    def bySymbol(cls, symbol): return cls.get_by('symbol', symbol)
+    def bySymbol(cls, symbol):
+        return cls.get_by('symbol', symbol)
+
 
 class MoneySQLAlchemy(MoneyInterface):
     """
@@ -245,9 +266,11 @@ class MoneySQLAlchemy(MoneyInterface):
 
     def __composite_values__(self):
         return (self.amount, self.currency_id)
+
     @property
     def widgetFormat(self):
         return "%.2f,%d" % (self.amount, self.currency_id)
+
 
 def compositeMoney(field, cls, default=None):
     """
@@ -255,36 +278,35 @@ def compositeMoney(field, cls, default=None):
     """
     default_amount = default_currency_id = {}
     if default:
-        default_amount = {'server_default':str(default.__composite_values__()[0])}
-        default_currency_id = {'server_default':str(default.__composite_values__()[1])}
+        default_amount = {'server_default': str(default.__composite_values__()[0])}
+        default_currency_id = {'server_default': str(default.__composite_values__()[1])}
     return orm.composite(cls,
-            schema.Column('%s_amount' % field, types.Numeric, **default_amount),
-            schema.Column('%s_currency_id' % field, types.Integer,
-                schema.ForeignKey('%s.id' % cls.__currencyclass__.__tablename__),
-                **default_currency_id),
-            comparator_factory=MoneyComparator)
+                         schema.Column('%s_amount' % field, types.Numeric, **default_amount),
+                         schema.Column('%s_currency_id' % field, types.Integer,
+                         schema.ForeignKey('%s.id' % cls.__currencyclass__.__tablename__),
+                         **default_currency_id),
+                         comparator_factory=MoneyComparator)
+
 
 class MoneyComparator(CompositeProperty.Comparator):
     def __commontest(self, other):
         return self.__clause_element__().clauses[1] == other.__composite_values__()[1]
 
     def __lt__(self, other):
-        return sql.and_(
-                *[self.__clause_element__().clauses[0] < other.__composite_values__()[0],
-                    self.__commontest(other)])
-    def __le__(self, other):
-        return sql.and_(
-                *[self.__clause_element__().clauses[0] <= other.__composite_values__()[0],
-                    self.__commontest(other)])
-    def __ge__(self, other):
-        return sql.and_(
-                *[self.__clause_element__().clauses[0] >= other.__composite_values__()[0],
-                    self.__commontest(other)])
-    def __gt__(self, other):
-        return sql.and_(
-                *[self.__clause_element__().clauses[0] > other.__composite_values__()[0],
-                    self.__commontest(other)])
+        return sql.and_(*[self.__clause_element__().clauses[0] < other.__composite_values__()[0],
+                        self.__commontest(other)])
 
+    def __le__(self, other):
+        return sql.and_(*[self.__clause_element__().clauses[0] <= other.__composite_values__()[0],
+                        self.__commontest(other)])
+
+    def __ge__(self, other):
+        return sql.and_(*[self.__clause_element__().clauses[0] >= other.__composite_values__()[0],
+                        self.__commontest(other)])
+
+    def __gt__(self, other):
+        return sql.and_(*[self.__clause_element__().clauses[0] > other.__composite_values__()[0],
+                        self.__commontest(other)])
 
 
 if __name__ == "__main__":

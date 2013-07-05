@@ -10,6 +10,7 @@
 
 import xml.etree.ElementTree as et
 
+
 class xmlTree(object):
     """
     @class xmlTree
@@ -18,8 +19,9 @@ class xmlTree(object):
     """
 
     def __init__(self, xml=None):
-        self.parsed={}
-        if xml: self.parse(xml)
+        self.parsed = {}
+        if xml:
+            self.parse(xml)
 
     def __repr__(self):
         return r'<%s()>' % (self.__class__.__name__)
@@ -30,32 +32,31 @@ class xmlTree(object):
         @param xml XML text to be parsed
         @return Nothing. Populates self.parsed
         """
-        x=et.fromstring(xml)
+        x = et.fromstring(xml)
         self._recurse(self.parsed, x)
 
     def _recurse(self, branch, elem):
         try:
-            text=elem.text.strip()
+            text = elem.text.strip()
         except:
-            text=''
+            text = ''
 
-        if len(elem.getchildren()): # This is a branch
-            if branch.has_key(elem.tag):
+        if len(elem.getchildren()):  # This is a branch
+            if elem.tag in branch:
                 if type(branch[elem.tag]) == list:
                     branch[elem.tag].append({})
                 else:
-                    branch[elem.tag] = [ branch[elem.tag], {} ]
-                toPass=branch[elem.tag][-1]
+                    branch[elem.tag] = [branch[elem.tag], {}]
+                toPass = branch[elem.tag][-1]
             else:
-                branch[elem.tag]={}
-                toPass=branch[elem.tag]
+                branch[elem.tag] = {}
+                toPass = branch[elem.tag]
             for i in elem.getchildren():
                 self._recurse(toPass, i)
-        else: # This is a leaf
-            if branch.has_key(elem.tag):
+        else:  # This is a leaf
+            if elem.tag in branch:
                 if type(branch[elem.tag]) != list:
-                    branch[elem.tag]=[ branch[elem.tag] ]
+                    branch[elem.tag] = [branch[elem.tag]]
                 branch[elem.tag].append(text)
             else:
-                branch[elem.tag]=text
-
+                branch[elem.tag] = text

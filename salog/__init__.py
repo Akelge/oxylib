@@ -7,4 +7,3 @@ $Id$
 __headUrl__  = '$HeadURL$'
 
 from handlers import *
-

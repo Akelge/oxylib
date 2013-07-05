@@ -7,6 +7,7 @@ log = logging.getLogger('ldapORM.types')
 # Attributes
 ############
 
+
 class LDAPAttribute(object):
     """
     An LDAP Attribute.
@@ -29,8 +30,11 @@ class LDAPAttribute(object):
         self.name = name
         self.list = list
 
-    def __str__(self): return str(self.name)
-    def __repr__(self): return "<%s('%s')>" % (self.__class__.__name__, self.name)
+    def __str__(self):
+        return str(self.name)
+
+    def __repr__(self):
+        return "<%s('%s')>" % (self.__class__.__name__, self.name)
 
     def _toPython(self, value):
         """
@@ -48,10 +52,11 @@ class LDAPAttribute(object):
             2) call type specific caster _cast
 
         Remember: this function ALWAYS receive a list as value!!!
-            
+
         """
         # log.debug('convert %s' % value)
-        if not self.list and type(value)==list:
+
+        if not self.list and type(value) == list:
             # Reduce a list to a scalar
             # log.debug('not list -> converting %s to scalar' % value)
             value = value[0]
@@ -68,6 +73,7 @@ class LDAPAttribute(object):
 # Custom types
 ###########################
 
+
 class String(LDAPAttribute):
     """
     String LDAP Attribute.
@@ -80,6 +86,7 @@ class String(LDAPAttribute):
         else:
             return value
 
+
 class Integer(LDAPAttribute):
     """
     Integer LDAP attribute.
@@ -87,6 +94,7 @@ class Integer(LDAPAttribute):
 
     def _toPython(self, value):
         return int(value)
+
 
 class Float(LDAPAttribute):
     """
@@ -96,6 +104,7 @@ class Float(LDAPAttribute):
     def _toPython(self, value):
         return float(value)
 
+
 class Boolean(LDAPAttribute):
     """
     Boolean LDAP attribute.
@@ -103,7 +112,8 @@ class Boolean(LDAPAttribute):
     """
 
     def _toPython(self, value):
-        return (value == 'TRUE' or value == True)
+        return (value == 'TRUE' or value is True)
+
 
 class Set(LDAPAttribute):
     """
@@ -116,10 +126,12 @@ class Set(LDAPAttribute):
         self.set = set
 
     def _toPython(self, value):
-        if not len(self.set): return value
+        if not len(self.set):
+            return value
         if not value in self.set:
             raise Exception("Wrong value: %s not in %s" % (value, self.set))
         return value
+
 
 class Datetime(LDAPAttribute):
     """
@@ -133,6 +145,7 @@ class Datetime(LDAPAttribute):
             return dt.datetime.strptime(value, "%Y%m%d%H%M%SZ")
         else:
             return None
+
 
 class Relation(LDAPAttribute):
     """

@@ -9,13 +9,15 @@
 from paste.response import has_header
 from paste.wsgilib import intercept_output
 
+
 class testMiddleware(object):
     def __init__(self, app):
         self.app = app
 
     def __call__(self, environ, start_response):
-        environ['NEWMID']=True
+        environ['NEWMID'] = True
         return self.app(environ, start_response)
+
 
 class ContentLengthMiddleware(object):
     """Adds a content-length header to responses which lack one,
