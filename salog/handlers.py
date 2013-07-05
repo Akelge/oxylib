@@ -51,7 +51,9 @@ class SAHandler(logging.Handler):
         metadata = model.Base.metadata
 
         class SALog(object):
-            pass
+            @property
+            def levelName(self):
+                return logging.getLevelName(self.level)
 
         log_table = schema.Table(
                 self.tablename,
@@ -89,6 +91,7 @@ class SAHandler(logging.Handler):
 # Logging part
     def setLevel(self, level=logging.NOTSET):
         self.level=level
+
 
     def emit(self, record):
         # We do not log sqlalchemy queries to not exceed recursion limit
