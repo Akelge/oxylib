@@ -34,4 +34,4 @@ import logging
 log = logging.getLogger(__name__)
 
 from engine import * # Connection, query and result
-import types
+import ldapTypes
