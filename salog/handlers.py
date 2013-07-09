@@ -51,9 +51,24 @@ class SAHandler(logging.Handler):
         metadata = model.Base.metadata
 
         class SALog(object):
+            """
+            SA Log model class
+            """
             @property
             def levelName(self):
                 return logging.getLevelName(self.level)
+
+            def toDict(self):
+                return {'id': self.id,
+                        'date': self.date.isoformat(),
+                        'name': self.name,
+                        'filename': self.filename,
+                        'lineno': self.lineno,
+                        'func': self.func,
+                        'level': self.level,
+                        'user': self.user,
+                        'addr': self.addr,
+                        'msg': self.msg}
 
         log_table = schema.Table(
             self.tablename,

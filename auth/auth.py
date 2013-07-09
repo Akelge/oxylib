@@ -321,7 +321,12 @@ def logout():
 #
 
 
-def isAuthorized(clause=None, user=None):
+def isAuthorized(clause=None, user=None, sep='.'):
+    """
+    @param clause - free form clause with and, or not, see expandPermClause
+    @param user - AuthenticatedUser object
+    @param sep - character used to split clause components
+    """
     if not user:
         user = sessionLoad()
     if not user.isAuthenticated():
@@ -330,7 +335,8 @@ def isAuthorized(clause=None, user=None):
         return True
 
     if clause:
-        expandedclause = expandPermClause(clause, user.roles, user.perms)
+        expandedclause = expandPermClause(clause, user.roles, user.perms,
+                                          sep=sep)
         try:
             return eval(expandedclause)
         except:
@@ -395,8 +401,14 @@ class authorize(object):
     """
     Authenticator decorator
     """
-    def __init__(self, clause=None):
+    def __init__(self, clause=None, sep='.'):
+        """
+        @param clause - free form clause with and, or not, see expandPermClause
+        @param sep - character used to split clause components
+        """
+
         self.clause = clause
+        self.sep = sep
 
     @classmethod
     def before(self, clause=None):
@@ -404,7 +416,7 @@ class authorize(object):
         Method to be called like a def, i.e. in __before__
         """
         if isAuthenticated():
-            if isAuthorized(clause=clause):
+            if isAuthorized(clause=clause, sep=self.sep):
                     return True
             else:
                 raise NotAuthorized()
@@ -432,21 +444,34 @@ class authorize(object):
         return isAuthenticated()
 
     def isAuthorized(self):
-        return isAuthorized(clause=self.clause)
+        return isAuthorized(clause=self.clause, sep=self.sep)
 
 #
 # Misc
 #
 
 
-def expandPermClause(clause, roles, perms):
+def expandPermClause(clause, roles, perms, sep='.'):
     """
     expand a permission clause, used in isAuthorized
+    clause is a free form string like:
+        'role'
+    or
+        'groupname.role'
+    example:
+        'administer' or 'Administrators.administer'
+
+    roles is a list of roles
+    perms is a list of perms
+    sep is the character to use as separator to split groupname and role
+    defaults to ., but is better to use something like ':' if perms match email
+    address pattern, i.e.
+    'support@oxysoft.com'
     """
-    g = re.findall(r'\w+[.]\w+', clause)
+    g = re.findall(r'\S+[%s]\S+' % sep, clause)
     if g:
         for el in g:
-            group, perm = el.split('.')
+            group, perm = el.split(sep)
             try:
                 replace = str(perm in perms[group])
                 replace = "True"
@@ -454,7 +479,7 @@ def expandPermClause(clause, roles, perms):
                 replace = "False"
             clause = re.sub("%s" % el, replace, clause)
 
-    g = re.findall(r'\w+', clause)
+    g = re.findall(r'\S+', clause)
     if g:
         for el in g:
             role = el

@@ -103,12 +103,14 @@ class LDAPQuery(object):
         log.debug('Init query')
         self.ldapSession = connection
         self.objclass = objclass
+        self.ldapFilter = '(objectClass=%s)' % self.objclass.objectClass
 
     def __repr__(self):
         return "<%s(%r)>" % (self.__class__.__name__,
                              self.objclass.__name__)
 
-    def _search(self, ldapFilter,
+    def _search(self,
+                ldapFilter=None,
                 attrs=None,
                 baseDN=None,
                 scope=None,
@@ -117,18 +119,20 @@ class LDAPQuery(object):
         Low level LDAP search
         """
 
+        if ldapFilter is None:
+            ldapFilter = self.ldapFilter
+
         attrs = attrs or self.objclass.attributes()
         baseDN = baseDN or self.baseDN
         scope = scope or self.scope
 
         log.debug('searching with baseDN: %s, scope: %s, filter: %s, attrs: %s'
-                  % (baseDN, scope, ldapFilter, attrs))
+                  % (baseDN, scope, self.ldapFilter, attrs))
         try:
             result = self.ldapSession.c.search_s(baseDN,
                                                  scope,
                                                  ldapFilter,
-                                                 attrs,
-                                                 attrsonly)
+                                                 attrs, attrsonly)
 
         except Exception, e:
             log.warn('search_s raised %s' % e)
@@ -183,6 +187,7 @@ class LDAPQuery(object):
 
     def search(self, ldapFilter):
         """
+        DEPRECATED: use .filter().all()
         Search ldap for objects matching ldapFilter, OO mode
         @ldapFilter: an LDAP filter
 
@@ -190,23 +195,25 @@ class LDAPQuery(object):
         (&(objectClass=resultObjectClass)(ldapFilter))
         """
 
-        ldapFilter = self.objclass._search_filter() % ldapFilter
-        result = self._search(ldapFilter)
+        log.warn('obsolete .search() ldapORM method')
+        return self.filter(ldapFilter).all()
 
-        retList = map(lambda r: self._map(r), result)
-        if self.sorting:
-            retList.sort(key=self.sortKeyFn, reverse=self.sortReverse)
-        return retList
-
-    def count(self, ldapFilter):
+    def count(self):
         """
         Return count of object matching LDAP query
         """
-        ldapFilter = self.objclass._search_filter() % ldapFilter
-        result = self._search(ldapFilter, attrs=[],
+        # ldapFilter = self.objclass._search_filter() % ldapFilter
+        result = self._search(attrs=[],
                               attrsonly=1)
 
         return len(result)
+
+    def first(self):
+        """
+        Return first object matchin query.
+        TODO: Should be better to search, then sort, then map
+        """
+        return self.all()[0]
 
     def all(self):
         """
@@ -216,8 +223,8 @@ class LDAPQuery(object):
         (objectClass=resultObjectClass)
 
         """
-        ldapFilter = '(objectClass=%s)' % self.objclass.objectClass
-        result = self._search(ldapFilter)
+        # ldapFilter = '(objectClass=%s)' % self.objclass.objectClass
+        result = self._search()
 
         retList = map(lambda r: self._map(r), result)
         if self.sorting:
@@ -240,11 +247,24 @@ class LDAPQuery(object):
         else:
             return None
 
+    def filter(self, ldapFilter):
+        """
+        Build filter
+        """
+
+        if not (ldapFilter.startswith('(') and ldapFilter.endswith(')')):
+            ldapFilter = '(%s)' % ldapFilter
+
+        self.ldapFilter = '(&(objectClass=%s)%s)' % (self.objclass.objectClass,
+                                                     ldapFilter)
+        return self
+
     def sort(self, attribute, reverse=False):
         """
         Sorting.
         Build key Function for sorting and set direction
         """
+
         self.sorting = True
         self.sortKeyFn = lambda e: e.__getattribute__(attribute)
         self.sortReverse = reverse
