@@ -35,29 +35,33 @@ class Formatter(object):
 
     formats = {
         'dict': {
-        'fn': 'toDict',
-        'type': 'text/plain;charset=utf-8'
+            'fn': 'toDict',
+            'type': 'text/plain;charset=utf-8'
         },
 
         'xml': {
-        'fn': 'toXML',
-        'type': 'text/xml;charset=utf-8'
+            'fn': 'toXML',
+            'type': 'text/xml;charset=utf-8'
         },
         'json': {
-        'fn': 'toJSON',
-        'type': 'application/json;charset=utf-8'
+            'fn': 'toJSON',
+            'type': 'application/json;charset=utf-8'
+        },
+        'dtable': {
+            'fn': 'toDtable',
+            'type': 'application/json;charset=utf-8'
         },
         'csv': {
-        'fn': 'toCSV',
-        'type': 'text/csv;charset=utf-8'
+            'fn': 'toCSV',
+            'type': 'text/csv;charset=utf-8'
         },
         'html': {
-        'fn': 'toHTML',
-        'type': 'text/html;charset=utf-8'
+            'fn': 'toHTML',
+            'type': 'text/html;charset=utf-8'
         },
         'txt': {
-        'fn': 'toTXT',
-        'type': 'text/plain;charset=utf-8'
+            'fn': 'toTXT',
+            'type': 'text/plain;charset=utf-8'
         }
     }
 
@@ -98,7 +102,7 @@ class Formatter(object):
             else:
                 return str(self.objDict)
 
-        if isinstance(obj, list) or isinstance(obj, set):
+        if isinstance(obj, (list, set)):
             return [self.toDict(item) for item in obj]
         elif isinstance(obj, dict):
             newDict = {}
@@ -127,6 +131,17 @@ class Formatter(object):
             return json.dumps(self.objDict, indent=2)
         else:
             return json.dumps(self.objDict)
+
+    def toDtable(self):
+        dtDict = {
+            'iTotalRecords': len(self.objDict),
+            'iTotalDisplayRecords': len(self.objDict),
+            'aaData': self.objDict
+        }
+        if config['debug']:
+            return json.dumps(dtDict, indent=2)
+        else:
+            return json.dumps(dtDict)
 
     def toCSV(self):
         csv.register_dialect('ourdialect', delimiter=';', quoting=csv.QUOTE_NONE)

@@ -29,7 +29,7 @@ printableChars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
 # PLAIN CLEARTEXT - Synonyms
 # CRAM-MD5 - Hardest one: by now we use dovecotpw/doveadm external auth
 # MD5 HMAC-MD5 DIGEST-MD5 LDAP-MD5 - MD5, various encoding
-# PLAIN-MD4 PLAIN-MD5 - Plain
+# PLAIN-MD5 - Plain
 # LANMAN NTLM OTP SKEY RPA - Legacy algorithms
 # SHA256-CRYPT SHA512-CRYPT - Unix SHA encrypted password
 # RANDOM-PLAIN # added by us returns a random password in PLAIN
@@ -42,7 +42,21 @@ class Password(object):
     basicSchemas = ['PLAIN', 'RANDOM-PLAIN', 'MD5', 'SHA256', 'EXT']  # 'CRAM-MD5'
 
     @classmethod
-    def randchar(cls, count):
+    def parse(cls, password):
+        if password.startswith('{'):  # Is it already 'full'?
+            schema, password = password.replace('{', '').split('}')
+        else:
+            schema = 'PLAIN'
+
+        npwd = cls()
+        npwd._password = password
+        npwd._schema = schema
+        npwd._schemaMethod = schema.lower().replace('-', '_')
+
+        return npwd
+
+    @classmethod
+    def randchar(cls, count=8):
         return ''.join([random.choice(printableChars) for x in xrange(count)])
 
     @classmethod
@@ -54,11 +68,12 @@ class Password(object):
     def _py_algos(cls):
         return tuple([x for x in cls.__dict__.keys() if x.startswith('_crypt_')])
 
-    def __init__(self, password, schema='PLAIN', optional=None):
+    def __init__(self, password='', schema='PLAIN', optional=None):
         self.optional = optional
 
         self._schema = 'PLAIN'
         self._schemaMethod = 'plain'
+
         self.password = password
         self.schema = schema.upper()
 
@@ -72,12 +87,17 @@ class Password(object):
     def full(self):
         return "{%s}%s" % (self.schema, self.password)
 
-    # @property
-    def get_schema(self):
+    @property
+    def schema(self):
         return "%s" % self._schema
 
-    # @schema.setter
-    def set_schema(self, schema):
+    @schema.setter
+    def schema(self, schema):
+        """
+        Schema changing.
+        If schema is the same do nothing,
+        we can only go from 'PLAIN' to encrypted ones
+        """
 
         self._schemaMethod = schema.lower().replace('-', '_')  # Lower case, no dash, for method calling
 
@@ -90,16 +110,30 @@ class Password(object):
         else:
             raise AssertionError("Cannot change schema from '%s' to '%s'" %
                                 (self._schema, schema))
-    schema = property(get_schema, set_schema)
 
-    # @property
-    def get_password(self):
+    @property
+    def password(self):
         return self._password
 
-    # @password.setter
-    def set_password(self, pw):
+    @password.setter
+    def password(self, pw):
         self._password = self.encrypt(pw, optional=self.optional)
-    password = property(get_password, set_password)
+
+    def check(self, plainpassword):
+        """
+        Given a plain text password check if it the same,
+        re-encrypting it, if possible.
+        """
+        try:
+            return self.__getattribute__("_check_%s" %
+                                         self._schemaMethod)(plainpassword,
+                                                             optional=self.optional)
+        except AttributeError:
+            testpw = Password(plainpassword, schema=self.schema,
+                              optional=self.optional)
+            return (testpw.full == self.full)
+
+    equal = check
 
     ###################
     # Encryption part #
@@ -121,13 +155,13 @@ class Password(object):
         return pw_encrypted_in_schema
 
     """
-    def _b64encode(string):
+    def _b64encode(self, string):
         return string.encode('base64').rstrip()
 
-    def _b64decode(string):
+    def _b64decode(self, string):
         return string.decode('base64')
 
-    def _dovecotpw(self, pw, optional):
+    def _dovecotpw(self, pw, optional=None):
         """
         generic fallback, use dovecot utility
         """
@@ -175,8 +209,10 @@ class Password(object):
                 optional = 8
         return self.randchar(optional)
 
-    def _crypt_crypt(self, pw, optional=None):
-        return crypt.crypt(pw, self.randchar())
+    def _crypt_crypt(self, pw, optional=None, salt=None):
+        if salt is None:
+            salt = self.randchar()
+        return crypt.crypt(pw, salt)
 
     def _crypt_digest_md5(self, pw, optional=None):
         """
@@ -216,8 +252,9 @@ class Password(object):
         sha = hashlib.new('sha%d' % bits, pw)
         if not salt:
             salt = self.randchar(count=salted_algo_salt_len)
+
         sha.update(salt)
-        return (sha.digest() + salt).encode('base64').rstrip()
+        return self._b64encode(sha.digest() + salt)
 
     def _crypt_ssha(self, pw, optional=None, salt=None):
         return self._salted_ssha(pw, optional, bits=1)
@@ -235,7 +272,7 @@ class Password(object):
 
         return (md.digest() + salt).encode('base64').rstrip()
 
-    def _crypt_md5_crypt(self, pw, optional=None):
+    def _crypt_md5_crypt(self, pw, optional=None, salt=None):
         """
         Used to be called MD5 in versions <= 1.0.rc16 of dovecot
         It is Unix md5+crypt password schema, used in passwd/shadow file
@@ -243,7 +280,8 @@ class Password(object):
 
         magic = '$1$'
         passwd = pw
-        salt = self.randchar(count=9)
+        if salt is None:
+            salt = self.randchar(count=9)
         m = hashlib.md5(passwd + magic + salt)
 
         # /* Then just as many characters of the MD5(pw,salt,pw) */
@@ -303,3 +341,67 @@ class Password(object):
         return magic + salt + '$' + rearranged
 
     _crypt_md5 = _crypt_md5_crypt  # Retrocompatibility with dovecot version <= 1.0.rc16
+
+    ####################
+    # Check algorithms #
+    ####################
+    def _get_salt(self):
+        cryptpw = self._b64decode(self.password)
+        saltLen = len(cryptpw) - salted_algo_salt_len
+        return cryptpw[saltLen:]
+
+    def _check_crypt(self, pw, optional=None):
+        salt = self.password[:8]
+        return (self.password == crypt.crypt(pw, salt))
+
+    def _check_salted(self, pw, optional=None, bits=1):
+        checkPw = self._salted_ssha(pw, optional, salt=self._get_salt(),
+                                    bits=bits)
+        return (self.password == checkPw)
+
+    def _check_ssha(self, pw, optional=None):
+        return self._check_salted(pw, optional, bits=1)
+
+    def _check_ssha256(self, pw, optional=None):
+        return self._check_salted(pw, optional, bits=256)
+
+    def _check_ssha512(self, pw, optional=None):
+        return self._check_salted(pw, optional, bits=512)
+
+    def _check_smd5(self, pw, optional=None):
+        md = hashlib.md5(pw)
+        salt = self._get_salt()
+        md.update(salt)
+
+        return (self.password == self._b64encode(md.digest() +
+                                                 salt))
+
+    def _check_md5_crypt(self, pw, optional=None):
+        salt = self.password[3:12]
+        cryptPw = self._crypt_md5_crypt(pw, optional=None, salt=salt)
+        return (self.password == cryptPw)
+
+    _check_md5 = _check_md5_crypt  # Retrocompatibility with dovecot version <= 1.0.rc16
+
+if __name__ == '__main__':
+    for s in Password.schemas():
+        optional = None
+
+        if s == 'CRAM-MD5':
+            continue
+
+        if s == 'DIGEST-MD5':
+            optional = 'test@example.com'
+
+        print "test", s, ":",
+        p1 = Password('test123', schema=s, optional=optional)
+
+        if p1.schema != 'PLAIN':
+            checkPw = 'test123'
+        else:
+            checkPw = p1.password
+
+        if not p1.check(checkPw):
+            print "failed"
+        else:
+            print "ok"

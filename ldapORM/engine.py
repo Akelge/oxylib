@@ -100,7 +100,6 @@ class LDAPQuery(object):
     sortReverse = False
 
     def __init__(self, connection, objclass):
-        log.debug('Init query')
         self.ldapSession = connection
         self.objclass = objclass
         self.ldapFilter = '(objectClass=%s)' % self.objclass.objectClass
@@ -149,7 +148,7 @@ class LDAPQuery(object):
         resultDict = {'dn': dn}
 
         if self.objclass.ldapAttributes:
-            log.debug('Populating from ldapAttributes')
+            # log.debug('Populating from ldapAttributes')
             for attr in self.objclass.ldapAttributes:
                 # attrs is a dict {'ldapAttribute': ldapValue}
                 attrVal = attrs.get(attr.name, None)

@@ -15,19 +15,19 @@ from paste.util.import_string import eval_import
 
 class SAHandler(logging.Handler):
     """
-    \brief Logging handler that logs on a DB via SQLAlchemy ORM
-    \param model (\c str) application ORM model
-    \param tablename (\c str) name of the table that would contain log records. Defaults to 'logs'
-    \param sessKey (\c str) session key that contains Username. Defaults to 'oxylib.auth.user'
-    \param level (\c str) level of logging. Defaults to logging.NOTSET (0)
+    :brief Logging handler that logs on a DB via SQLAlchemy ORM
+    :param model (\c str) application ORM model
+    :param tablename (\c str) name of the table that would contain log records. Defaults to 'logs'
+    :param sessKey (\c str) session key that contains Username. Defaults to 'oxylib.auth.user'
+    :param level (\c str) level of logging. Defaults to logging.NOTSET (0)
 
     Usage example:
-        \code
+        :code
         [handler_salog]
         class = oxylib.salog.SAHandler
         args = ('PROJECTNAME.model',)
         level = NOTSET
-        \endcode
+        :endcode
 
     """
     def __init__(self, model,
@@ -66,7 +66,8 @@ class SAHandler(logging.Handler):
                         'lineno': self.lineno,
                         'func': self.func,
                         'level': self.level,
-                        'user': self.user,
+                        'levelName': self.levelName,
+                        'user': self.user or 'none',
                         'addr': self.addr,
                         'msg': self.msg}
 
