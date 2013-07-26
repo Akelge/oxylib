@@ -212,7 +212,9 @@ class LDAPQuery(object):
         Return first object matchin query.
         TODO: Should be better to search, then sort, then map
         """
-        return self.all()[0]
+        all = self.all()
+        if all:
+            return self.all()[0]
 
     def all(self):
         """
