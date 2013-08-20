@@ -194,14 +194,14 @@ class Formatter(object):
 
         ctl = request.environ['pylons.routes_dict']['controller']
         act = request.environ['pylons.routes_dict']['action']
-        tmpl = "%s_%s.mako" % (ctl, act)
+        template = "%s_%s.mako" % (ctl, act)
         try:
-            return render(tmpl)
+            return render(template)
         except mako.exceptions.TopLevelLookupException:
             self.status_int = 404
             return """<b>Template '%s' not found</b><p></p>
             Rendering as text<br />
-            <pre>%s</pre>""" % (tmpl, self.toTXT())
+            <pre>%s</pre>""" % (template, self.toTXT())
 
     def toTXT(self):
         output = []

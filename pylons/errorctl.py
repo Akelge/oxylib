@@ -45,7 +45,7 @@ class HTTPCode(object):
         self.status = code
         self.text = self.http_codes.get(str(code), 'Unknown Error')
         if error:
-            self.error = str(error)
+            self.error = unicode(error)
         else:
             self.error = self.text
         self.data = data
@@ -86,7 +86,7 @@ class ErrorCtl(object):
         return self.abort(201, 'Created', 'Created', format)
 
     def Unauthorized(self, format='json'):
-        return self.abort(401, 'Unauthorized', 'You are not authorized to access the resuource', format)
+        return self.abort(401, 'Unauthorized', 'You are not authorized to access the resource', format)
 
     def NotAuthenticated(self, format='json'):
         return self.abort(402, 'Not Authenticated', 'Please login first', format)
