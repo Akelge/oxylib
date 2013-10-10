@@ -65,7 +65,7 @@ class Formatter(object):
         }
     }
 
-    def __init__(self, obj, format='json'):
+    def __init__(self, obj, format='json', sEcho=None, dCount=None):
         if format.lower() in self.formats.keys():
             self.format = format.lower()
         else:
@@ -73,6 +73,10 @@ class Formatter(object):
 
         self.status_int = 200
         self.objDict = self.toDict(obj)
+
+        # for dtable format, handshake with client-side
+        self.sEcho = sEcho
+        self.dCount = dCount
 
         if isinstance(obj, list):  # For XML generation we need to know class name
             if len(obj):
@@ -135,9 +139,12 @@ class Formatter(object):
     def toDtable(self):
         dtDict = {
             'iTotalRecords': len(self.objDict),
-            'iTotalDisplayRecords': len(self.objDict),
+            'iTotalDisplayRecords': self.dCount or len(self.objDict),
             'aaData': self.objDict
         }
+        if self.sEcho is not None:
+            dtDict['sEcho'] = self.sEcho
+
         if config['debug']:
             return json.dumps(dtDict, indent=2)
         else:
@@ -229,10 +236,10 @@ class Formatter(object):
     setResponse = respond  # Legacy
 
 
-def formatResponse(obj, format):
+def formatResponse(obj, format, sEcho=None, dCount=None):
     """
     Utility to compact writing of answers in controllers
     @param obj objects we want to format
     @param format output format
     """
-    Formatter(obj, format).respond()
+    Formatter(obj, format, sEcho=sEcho, dCount=dCount).respond()
