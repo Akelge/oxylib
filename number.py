@@ -28,10 +28,15 @@ def formatDecimal(value, locale, decimals=0):
     @param locale locale
     @param decimals decimal places to use, default (from format_decimal) is 3 places without rounding
     @return formatted number
+
+    BUG:
+    algebrically add 10E-12 to value to prevent rounding errors
     """
     format = '###,###'
     if decimals > 0:
         format = '###,###.%s' % ('0' * decimals)
+
+    value += 10**-12 if value > 0 else -10**-11
 
     return babelnumbers.format_decimal(value, format=format, locale=locale)
 
